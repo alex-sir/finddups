@@ -14,7 +14,9 @@
 #include <sys/stat.h> // for struct stat
 #include <limits.h>   // for _PC_PATH_MAX
 #include <errno.h>    // for errno
-#include <string.h>   // for strerror
+#include <string.h>   // for strerror, strcmp
+
+#define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) // max number of bytes in a file pathname
 
 // group of duplicate files
 typedef struct
@@ -24,7 +26,14 @@ typedef struct
     char *pathnames[];
 } Group;
 
-extern DIR *getDir(const long PATHNAME_MAX);
-extern void traverseDir(DIR *dir, Group *groups);
+/**
+ * @brief gets the name of the current directory
+ *
+ * @return char* name of the current directory
+ */
+extern char *getCurDir(void);
+extern void traverseDir(char *dir, char *parentDir, Group *groups);
+extern void checkDupsFile(struct dirent *file, struct stat fileInfo, char *filePathname, char *dirName, Group *groups);
+extern int compareFiles(char *pathname1, char *pathname2);
 
 #endif

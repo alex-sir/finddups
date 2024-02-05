@@ -13,8 +13,16 @@
 #include <errno.h>
 #include <dirent.h>
 
-extern void printDups(void);
-extern void printDirContents(DIR *dir);
+/**
+ * @brief prints an error message and exits the program
+ */
 extern void printErr(void);
+/**
+ * @brief prints all the contents in a directory (non-recursive)
+ *
+ * @param dir directory to have its contents printed
+ */
+extern void printDirContents(DIR *dir);
+extern void printDups(void);
 
 #endif

@@ -8,7 +8,7 @@
 
 void printErr(void)
 {
-    printf("%s\n", strerror(errno));
+    fprintf(stderr, "Error: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -17,7 +17,7 @@ void printDirContents(DIR *dir)
     struct dirent *entry;
     for (int i = 1; (entry = readdir(dir)); i++)
         printf("%d %s\n", i, entry->d_name);
-        
+
     rewinddir(dir);
 }
 

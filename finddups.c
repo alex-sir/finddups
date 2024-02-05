@@ -9,18 +9,18 @@
 
 int main(int argc, char const *argv[])
 {
-    Group *groups = malloc(10 * sizeof(Group));
-    const long PATHNAME_MAX = pathconf(".", _PC_PATH_MAX);
     // could not find the max size for a pathname
     if (PATHNAME_MAX == -1)
         printErr();
-    DIR *dir; // the directory
+
+    Group *groups = malloc(10 * sizeof(Group));
 
     // only traverse the current directory
     if (argc == 1)
     {
-        dir = getDir(PATHNAME_MAX);
-        traverseDir(dir, groups);
+        char *dirName = getCurDir(); // pathname to a directory
+        traverseDir(dirName, dirName, groups);
+        free(dirName);
     }
     else
     {
@@ -30,7 +30,6 @@ int main(int argc, char const *argv[])
         }
     }
 
-    closedir(dir);
     printDups();
     free(groups);
 
