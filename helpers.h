@@ -13,6 +13,8 @@
 #include <errno.h>
 #include <dirent.h>
 
+#include "traverse.h"
+
 /**
  * @brief prints an error message and exits the program
  */
@@ -23,6 +25,7 @@ extern void printErr(void);
  * @param dir directory to have its contents printed
  */
 extern void printDirContents(DIR *dir);
-extern void printDups(void);
+extern void printDups(Groups *groupsList);
+extern void freeDups(Groups *groupsList);
 
 #endif

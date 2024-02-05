@@ -13,13 +13,14 @@ int main(int argc, char const *argv[])
     if (PATHNAME_MAX == -1)
         printErr();
 
-    Group *groups = malloc(10 * sizeof(Group));
+    Groups groupsList = {0, (Group **)malloc(10 * sizeof(Group *))};
 
     // only traverse the current directory
     if (argc == 1)
     {
-        char *dirName = getCurDir(); // pathname to a directory
-        traverseDir(dirName, dirName, groups);
+        char *dirName;
+        dirName = getCurDir(); // pathname to a directory
+        traverseDir(dirName, dirName, &groupsList);
         free(dirName);
     }
     else
@@ -27,11 +28,15 @@ int main(int argc, char const *argv[])
         // loop through every file/directory given in the command line
         for (int i = 1; i < argc; i++)
         {
+            const char *dirName;
+            dirName = argv[1];
+            traverseDir(dirName, dirName, &groupsList);
         }
     }
 
-    printDups();
-    free(groups);
+    printDups(&groupsList);
+    freeDups(&groupsList);
+    free(groupsList.members);
 
     return 0;
 }

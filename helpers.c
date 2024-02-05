@@ -21,6 +21,30 @@ void printDirContents(DIR *dir)
     rewinddir(dir);
 }
 
-void printDups(void)
+void printDups(Groups *groupsList)
 {
+    Group *curGroup;
+
+    for (int i = 0; i < groupsList->count; i++)
+    {
+        curGroup = groupsList->members[i];
+
+        for (int j = 0; j < curGroup->count; j++)
+        {
+            printf("%d %d %s\n", curGroup->count, j + 1, curGroup->pathnames[j]);
+        }
+    }
+}
+
+void freeDups(Groups *groupsList)
+{
+    for (int i = 0; i < groupsList->count; i++)
+    {
+        for (int j = 0; j < groupsList->members[i]->count; j++)
+        {
+            free(groupsList->members[i]->pathnames[j]);
+        }
+
+        free(groupsList->members[i]);
+    }
 }

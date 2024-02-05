@@ -16,15 +16,22 @@
 #include <errno.h>    // for errno
 #include <string.h>   // for strerror, strcmp
 
-#define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) // max number of bytes in a file pathname
+#define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) + 1 // max number of bytes in a file pathname
 
 // group of duplicate files
 typedef struct
 {
     int id;
-    int members;
-    char *pathnames[];
+    int count;
+    char **pathnames;
 } Group;
+
+// group of groups
+typedef struct
+{
+    int count;
+    Group **members;
+} Groups;
 
 /**
  * @brief gets the name of the current directory
@@ -32,8 +39,11 @@ typedef struct
  * @return char* name of the current directory
  */
 extern char *getCurDir(void);
-extern void traverseDir(char *dir, char *parentDir, Group *groups);
-extern void checkDupsFile(struct dirent *file, struct stat fileInfo, char *filePathname, char *dirName, Group *groups);
-extern int compareFiles(char *pathname1, char *pathname2);
+extern void traverseDir(const char *dir, const char *parentDir, Groups *groupsList);
+int isAlreadyDup(Groups *groupsList, char *pathname);
+void checkDupsFile(struct dirent *file, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList);
+Group *setupGroup(int groupsCount, char *pathname);
+void updateGroup(Group *group, char *pathname);
+int compareFiles(const char *pathname1, const char *pathname2);
 
 #endif

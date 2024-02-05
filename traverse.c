@@ -9,7 +9,7 @@
 
 char *getCurDir(void)
 {
-    char *dirName = malloc(PATHNAME_MAX);
+    char *dirName = (char *)malloc(PATHNAME_MAX);
     // invalid pathname
     if (getcwd(dirName, PATHNAME_MAX) == NULL)
     {
@@ -20,7 +20,7 @@ char *getCurDir(void)
     return dirName;
 }
 
-void traverseDir(char *dirName, char *parentDir, Group *groups)
+void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
 {
     DIR *dir; // the directory
     dir = opendir(dirName);
@@ -43,13 +43,12 @@ void traverseDir(char *dirName, char *parentDir, Group *groups)
         case __S_IFDIR: // directory
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
             {
-                // printf("%s is a directory\n", entry->d_name);
-                traverseDir(newPathname, parentDir, groups); // recursive call
+                traverseDir(newPathname, parentDir, groupsList); // recursive call
             }
             break;
         case __S_IFREG: // regular file
-            // printf("%s is a regular file\n", entry->d_name);
-            checkDupsFile(entry, entryInfo, newPathname, parentDir, groups);
+            if (!isAlreadyDup(groupsList, newPathname))
+                checkDupsFile(entry, entryInfo, newPathname, parentDir, groupsList);
             break;
         default: // otherwise file is ignored
             break;
@@ -59,8 +58,31 @@ void traverseDir(char *dirName, char *parentDir, Group *groups)
     closedir(dir);
 }
 
-void checkDupsFile(struct dirent *file, struct stat fileInfo, char *filePathname, char *dirName, Group *groups)
+int isAlreadyDup(Groups *groupsList, char *pathname)
 {
+    Group *curGroup;
+    int isDup = 0;
+
+    for (int i = 0; i < groupsList->count && !isDup; i++)
+    {
+        curGroup = groupsList->members[i];
+
+        for (int j = 0; j < curGroup->count; j++)
+        {
+            if (strcmp(curGroup->pathnames[j], pathname) == 0)
+            {
+                isDup = 1;
+                break;
+            }
+        }
+    }
+
+    return isDup;
+}
+
+void checkDupsFile(struct dirent *file, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList)
+{
+    int foundGroup = 0;
     DIR *dir;
     dir = opendir(dirName);
     if (dir == NULL)
@@ -79,7 +101,7 @@ void checkDupsFile(struct dirent *file, struct stat fileInfo, char *filePathname
         {
         case __S_IFDIR:
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-                checkDupsFile(file, fileInfo, filePathname, newPathname, groups); // recursive call
+                checkDupsFile(file, fileInfo, filePathname, newPathname, groupsList); // recursive call
             break;
         case __S_IFREG: // compare the files
             /*
@@ -89,9 +111,18 @@ void checkDupsFile(struct dirent *file, struct stat fileInfo, char *filePathname
             */
             if (strcmp(entry->d_name, file->d_name) != 0 &&
                 entryInfo.st_size == fileInfo.st_size &&
-                compareFiles(filePathname, newPathname))
+                compareFiles(filePathname, newPathname) &&
+                !isAlreadyDup(groupsList, entry->d_name))
             {
-                printf("%s and %s are duplicates\n", file->d_name, entry->d_name);
+                if (!foundGroup)
+                {
+                    foundGroup = 1;
+                    groupsList->count++;
+                    groupsList->members[groupsList->count - 1] = setupGroup(groupsList->count, file->d_name);
+                    updateGroup(groupsList->members[groupsList->count - 1], entry->d_name);
+                }
+                else
+                    updateGroup(groupsList->members[groupsList->count - 1], entry->d_name);
             }
             break;
         default:
@@ -100,7 +131,27 @@ void checkDupsFile(struct dirent *file, struct stat fileInfo, char *filePathname
     }
 }
 
-int compareFiles(char *pathname1, char *pathname2)
+Group *setupGroup(int groupsCount, char *pathname)
+{
+    Group *newGroup;
+    newGroup = (Group *)malloc(sizeof(Group));
+    newGroup->id = groupsCount;
+    newGroup->count = 1;
+    newGroup->pathnames = (char **)malloc(10 * (sizeof(char *)));
+    newGroup->pathnames[newGroup->count - 1] = (char *)malloc(strlen(pathname) + 1);
+    strcpy(newGroup->pathnames[newGroup->count - 1], pathname);
+
+    return newGroup;
+}
+
+void updateGroup(Group *group, char *pathname)
+{
+    group->count++;
+    group->pathnames[group->count - 1] = (char *)malloc(strlen(pathname) + 1);
+    strcpy(group->pathnames[group->count - 1], pathname);
+}
+
+int compareFiles(const char *pathname1, const char *pathname2)
 {
     /*
         moe, larry, and curly are dups
