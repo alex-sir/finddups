@@ -17,12 +17,7 @@ int main(int argc, char const *argv[])
 
     // only traverse the current directory
     if (argc == 1)
-    {
-        char *dirName;
-        dirName = getCurDir(); // pathname to a directory
-        traverseDir(dirName, dirName, &groupsList);
-        free(dirName);
-    }
+        traverseDir(".", ".", &groupsList);
     else
     {
         // loop through every file/directory given in the command line
@@ -36,7 +31,6 @@ int main(int argc, char const *argv[])
 
     printDups(&groupsList);
     freeDups(&groupsList);
-    free(groupsList.members);
 
     return 0;
 }
