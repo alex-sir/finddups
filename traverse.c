@@ -16,9 +16,27 @@ char *getCurDir(void)
         free(dirName);
         printErr();
     }
-    // TODO: Make the path a relative path
 
     return dirName;
+}
+
+int checkFiletype(const char *filename)
+{
+    struct stat fileInfo;
+    stat(filename, &fileInfo);
+
+    switch (fileInfo.st_mode & __S_IFMT)
+    {
+    case __S_IFDIR: // directory
+        return 1;
+        break;
+    case __S_IFREG: // regular file
+        return 2;
+        break;
+    default: // invalid filetype
+        return -1;
+        break;
+    }
 }
 
 void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
@@ -36,6 +54,9 @@ void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
     {
         char newPathname[PATHNAME_MAX];
         sprintf(newPathname, "%s/%s", dirName, entry->d_name);
+        // if directory starts with "./", remove it
+        if (strncmp(newPathname, "./", 2) == 0)
+            memmove(newPathname, newPathname + 2, strlen(newPathname) - 1);
         stat(newPathname, &entryInfo);
 
         // check if the file is a directory or a regular file
@@ -47,7 +68,7 @@ void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
             break;
         case __S_IFREG: // regular file
             if (!isAlreadyDup(groupsList, newPathname))
-                checkDupsFile(entry, entryInfo, newPathname, parentDir, groupsList);
+                checkDupsFile(entry->d_name, entryInfo, newPathname, parentDir, groupsList);
             break;
         default: // otherwise file is ignored
             break;
@@ -57,7 +78,28 @@ void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
     closedir(dir);
 }
 
-static int isAlreadyDup(Groups *groupsList, char *pathname)
+/* 3 cases
+    1. Compare directories to directories
+    2. Compare regular files to regular files
+    3. Compare directories to regular files
+Algorithm (1, 2)
+    Each directory specified in the command line will be compared to every single other directory
+    Example: /dir1 /dir2 /dir3 /dir4
+        1. Compare /dir1 to /dir2, then /dir3, then /dir4
+        2. Compare /dir2 to dir3, then dir4
+        3. Compare /dir3 to /dir4
+        4. Done
+    Similar algorithm will be done for comparing all files specified in the command line
+Algorithm (3)
+    Set the directory as the "parent directory" and compare all files there to the regular file
+    Repeat this for all combinations of regular files and directories
+    Can maybe just use checkDupsFile (or a modified version of it)
+*/
+void traverseDirs(void)
+{
+}
+
+int isAlreadyDup(Groups *groupsList, const char *pathname)
 {
     Group *curGroup;
 
@@ -76,9 +118,8 @@ static int isAlreadyDup(Groups *groupsList, char *pathname)
     return 0; // not marked as a duplicate
 }
 
-static void checkDupsFile(struct dirent *file, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList)
+void checkDupsFile(const char *filename, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList)
 {
-    int foundGroup = 0;
     DIR *dir;
     dir = opendir(dirName);
     if (dir == NULL)
@@ -91,13 +132,15 @@ static void checkDupsFile(struct dirent *file, struct stat fileInfo, const char 
     {
         char newPathname[PATHNAME_MAX];
         sprintf(newPathname, "%s/%s", dirName, entry->d_name);
+        if (strncmp(newPathname, "./", 2) == 0)
+            memmove(newPathname, newPathname + 2, strlen(newPathname) - 1);
         stat(newPathname, &entryInfo);
 
         switch (entryInfo.st_mode & __S_IFMT)
         {
         case __S_IFDIR:
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-                checkDupsFile(file, fileInfo, filePathname, newPathname, groupsList); // recursive call
+                checkDupsFile(filename, fileInfo, filePathname, newPathname, groupsList); // recursive call
             break;
         case __S_IFREG: // compare the files
             /*
@@ -107,13 +150,12 @@ static void checkDupsFile(struct dirent *file, struct stat fileInfo, const char 
                 each file should have the exact same byte data
             */
             if (entryInfo.st_size == fileInfo.st_size &&
-                strcmp(entry->d_name, file->d_name) != 0 &&
-                !isAlreadyDup(groupsList, entry->d_name) &&
+                strcmp(entry->d_name, filename) != 0 &&
+                !isAlreadyDup(groupsList, newPathname) &&
                 compareFiles(filePathname, newPathname))
             {
-                if (!foundGroup)
+                if (!isAlreadyDup(groupsList, filePathname))
                 {
-                    foundGroup = 1;
                     groupsList->count++;
                     groupsList->members[groupsList->count - 1] = setupGroup(groupsList->count, filePathname);
                     updateGroup(groupsList->members[groupsList->count - 1], newPathname);
@@ -130,7 +172,7 @@ static void checkDupsFile(struct dirent *file, struct stat fileInfo, const char 
     closedir(dir);
 }
 
-static Group *setupGroup(int groupsCount, const char *pathname)
+Group *setupGroup(int groupsCount, const char *pathname)
 {
     Group *newGroup;
     newGroup = (Group *)malloc(sizeof(Group));
@@ -143,14 +185,14 @@ static Group *setupGroup(int groupsCount, const char *pathname)
     return newGroup;
 }
 
-static void updateGroup(Group *group, const char *pathname)
+void updateGroup(Group *group, const char *pathname)
 {
     group->count++;
     group->pathnames[group->count - 1] = (char *)malloc(strlen(pathname) + 1);
     strcpy(group->pathnames[group->count - 1], pathname);
 }
 
-static int compareFiles(const char *pathname1, const char *pathname2)
+int compareFiles(const char *pathname1, const char *pathname2)
 {
     FILE *f1 = fopen(pathname1, "r");
     // file could not be opened for reading, stop the program

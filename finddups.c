@@ -7,7 +7,7 @@
 #include "traverse.h"
 #include "helpers.h"
 
-int main(int argc, char const *argv[])
+int main(int argc, char *argv[])
 {
     // could not find the max size for a pathname
     if (PATHNAME_MAX == -1)
@@ -23,9 +23,26 @@ int main(int argc, char const *argv[])
         // loop through every file/directory given in the command line
         for (int i = 1; i < argc; i++)
         {
-            const char *dirName;
-            dirName = argv[1];
-            traverseDir(dirName, dirName, &groupsList);
+            switch (checkFiletype(argv[i]))
+            {
+            case 1: // directory
+                // TODO: compare directories to each other
+                traverseDir(argv[i], argv[i], &groupsList);
+                break;
+            case 2: // regular file
+                /* TODO
+                    1. if other command line arguments are regular files:
+                        compare the given file to all other files specified in the command line
+                    2. if other command line arguments are directories:
+                        traverse the given directory and compare all files there to the given file
+                */
+                // struct stat fileInfo;
+                // stat(argv[i], &fileInfo);
+                // checkDupsFile(basename(argv[i]), fileInfo, argv[i], ".", &groupsList);
+                break;
+            default: // invalid filetype
+                break;
+            }
         }
     }
 
