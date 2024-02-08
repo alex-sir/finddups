@@ -26,6 +26,9 @@ int main(int argc, char *argv[])
             Set the directory as the "parent directory" and compare all files there to the regular file
             Repeat this for all combinations of regular files and directories
             Can maybe just use compareDirReg (or a modified version of it)
+        Algorithm(1)
+            Get one file from the first directory and compare it to all files in the other directory
+            Repeat this for all files in the first directory
     */
 
     // could not find the max size for a pathname
@@ -40,6 +43,7 @@ int main(int argc, char *argv[])
     else
     {
         int curFiletype = 0, comparingToFiletype = 0;
+        struct stat fileInfo;
         // loop through every file/directory given in the command line
         for (int curComparison = 1; curComparison < argc; curComparison++)
         {
@@ -57,12 +61,21 @@ int main(int argc, char *argv[])
             for (int comparingTo = curComparison + 1; comparingTo < argc; comparingTo++)
             {
                 comparingToFiletype = checkFiletype(argv[comparingTo]);
-
                 switch (curFiletype + comparingToFiletype)
                 {
                 case DIR_DIR:
                     break;
-                case DIR_REG:
+                case DIR_REG: // check for duplicates of a regular file in a directory
+                    if (curFiletype == FILE_REG)
+                    {
+                        stat(argv[curComparison], &fileInfo);
+                        compareDirReg(fileInfo, argv[curComparison], argv[comparingTo], &groupsList);
+                    }
+                    else
+                    {
+                        stat(argv[comparingTo], &fileInfo);
+                        compareDirReg(fileInfo, argv[comparingTo], argv[curComparison], &groupsList);
+                    }
                     break;
                 case REG_REG:
                     compareRegs(argv[curComparison], argv[comparingTo], &groupsList);

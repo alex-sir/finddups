@@ -9,7 +9,6 @@
 void printErr(void)
 {
     fprintf(stderr, "Error: %s\n", strerror(errno));
-    exit(EXIT_FAILURE);
 }
 
 void printDirContents(DIR *dir)

@@ -18,7 +18,6 @@
 #include <libgen.h>   // for dirname, basename
 
 #define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) + 1 // max number of bytes in a file pathname
-// TODO: change to enum
 #define FILE_DIR 1
 #define FILE_REG 2
 #define FILE_INV -1
@@ -44,7 +43,7 @@ typedef struct
 /**
  * @brief gets the name of the current directory
  *
- * @return char* name of the current directory
+ * @return char* name of the current directory or NULL on error
  */
 extern char *getCurDir(void);
 /**
@@ -60,8 +59,9 @@ extern int checkFiletype(const char *filename);
  * @param dirName name of directory being searched in
  * @param parentDir name of directory search started in
  * @param groupsList list of Group that hold information about duplicate files
+ * @return int 1 = success, -1 = error
  */
-extern void traverseDir(const char *dir, const char *parentDir, Groups *groupsList);
+extern int traverseDir(const char *dir, const char *parentDir, Groups *groupsList);
 /**
  * @brief checks if a file is already marked as duplicate in a Group
  *
@@ -89,17 +89,16 @@ extern void compareDirs(void);
 /**
  * @brief checks a file for any duplicates recursively through a directory tree
  *
- * @param filename name of the file to check for duplicates
  * @param fileInfo data related to file
  * @param filePathname pathname to file
  * @param dirName directory to recursively search for duplicate files
  * @param groupsList list of Group that hold information about duplicate files
+ * @return int 1 = success, -1 = error
  */
-extern void compareDirReg(const char *filename, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList);
-extern void compareRegs(char *pathname1, char *pathname2, Groups *groupsList);
-void fullRegsCheck(const char *filename, const char *filePathname, struct stat fileInfo,
-                   const char *entryName, const char *entryPathname, struct stat entryInfo,
-                   Groups *groupsList);
+extern int compareDirReg(struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList);
+extern int compareRegs(char *pathname1, char *pathname2, Groups *groupsList);
+extern char *getBasename(char *filename, char *pathname);
+void fullRegsCheck(const char *filePathname, struct stat fileInfo, const char *entryPathname, struct stat entryInfo, Groups *groupsList);
 /**
  * @brief opens and reads two files for comparison and returns if they are exactly identical
  *

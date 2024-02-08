@@ -15,6 +15,7 @@ char *getCurDir(void)
     {
         free(dirName);
         printErr();
+        return NULL;
     }
 
     return dirName;
@@ -39,13 +40,16 @@ int checkFiletype(const char *filename)
     }
 }
 
-void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
+int traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
 {
     DIR *dir; // the directory
     dir = opendir(dirName);
     // directory stream could not be opened
     if (dir == NULL)
+    {
         printErr();
+        return -1;
+    }
 
     struct dirent *entry; // an entry in a directory
     struct stat entryInfo;
@@ -68,7 +72,7 @@ void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
             break;
         case __S_IFREG: // regular file
             if (!isAlreadyDup(groupsList, newPathname))
-                compareDirReg(entry->d_name, entryInfo, newPathname, parentDir, groupsList);
+                compareDirReg(entryInfo, newPathname, parentDir, groupsList);
             break;
         default: // otherwise file is ignored
             break;
@@ -76,6 +80,7 @@ void traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
     }
 
     closedir(dir);
+    return 1;
 }
 
 int isAlreadyDup(Groups *groupsList, const char *pathname)
@@ -121,12 +126,15 @@ void compareDirs(void)
 {
 }
 
-void compareDirReg(const char *filename, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList)
+int compareDirReg(struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList)
 {
     DIR *dir;
     dir = opendir(dirName);
     if (dir == NULL)
+    {
         printErr();
+        return -1;
+    }
 
     struct dirent *entry;
     struct stat entryInfo;
@@ -143,10 +151,10 @@ void compareDirReg(const char *filename, struct stat fileInfo, const char *fileP
         {
         case __S_IFDIR:
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-                compareDirReg(filename, fileInfo, filePathname, entryPathname, groupsList); // recursive call
+                compareDirReg(fileInfo, filePathname, entryPathname, groupsList); // recursive call
             break;
         case __S_IFREG: // compare the files
-            fullRegsCheck(filename, filePathname, fileInfo, entry->d_name, entryPathname, entryInfo, groupsList);
+            fullRegsCheck(filePathname, fileInfo, entryPathname, entryInfo, groupsList);
             break;
         default:
             break;
@@ -154,46 +162,62 @@ void compareDirReg(const char *filename, struct stat fileInfo, const char *fileP
     }
 
     closedir(dir);
+    return 1;
 }
 
-void compareRegs(char *pathname1, char *pathname2, Groups *groupsList)
+int compareRegs(char *pathname1, char *pathname2, Groups *groupsList)
 {
-    // get stats on both files (don't have to open directories)
-    // do the comparisons
     struct stat fileInfo1, fileInfo2;
-    stat(pathname1, &fileInfo1);
-    stat(pathname2, &fileInfo2);
+    if (stat(pathname1, &fileInfo1) == -1)
+    {
+        printErr();
+        return -1;
+    }
+    if (stat(pathname2, &fileInfo2) == -1)
+    {
+        printErr();
+        return -1;
+    }
+    fullRegsCheck(pathname1, fileInfo1, pathname2, fileInfo2, groupsList);
 
-    // TODO: write a function to extract the filename from a file pathname (use strrchr)
-    char filename1[50] = "", filename2[50] = "";
-    strcpy(filename1, strrchr(pathname1, '/') + 1);
-    strcpy(filename2, strrchr(pathname2, '/') + 1);
-
-    fullRegsCheck(filename1, pathname1, fileInfo1, filename2, pathname2, fileInfo2, groupsList);
+    return 0;
 }
 
-void fullRegsCheck(const char *filename, const char *filePathname, struct stat fileInfo,
-                   const char *entryName, const char *entryPathname, struct stat entryInfo,
-                   Groups *groupsList)
+char *getBasename(char *filename, char *pathname)
+{
+    char *pathnameBasename = "";
+
+    if ((pathnameBasename = strrchr(pathname, '/') + 1))
+        strcpy(filename, pathnameBasename);
+    else
+        strcpy(filename, pathname);
+
+    return filename;
+}
+
+void fullRegsCheck(const char *filePathname, struct stat fileInfo, const char *entryPathname, struct stat entryInfo, Groups *groupsList)
 {
     /*
         files should be the same size in bytes if they are to be duplicates
         don't compare the file to itself
-        if a file is already marked as a duplicate it should not be added to a group again
         each file should have the exact same byte data
     */
-    if (entryInfo.st_size == fileInfo.st_size &&
-        strcmp(entryName, filename) != 0 &&
-        !isAlreadyDup(groupsList, entryPathname) &&
+    if (fileInfo.st_size == entryInfo.st_size &&
+        strcmp(filePathname, entryPathname) != 0 &&
         checkRegs(filePathname, entryPathname))
     {
-        if (!isAlreadyDup(groupsList, filePathname))
+        int isFileDup = isAlreadyDup(groupsList, filePathname),
+            isEntryDup = isAlreadyDup(groupsList, entryPathname);
+        // if both not dups, make a new group and add file and entry to it
+        if (!isFileDup && !isEntryDup)
         {
             groupsList->count++;
             groupsList->members[groupsList->count - 1] = setupGroup(groupsList->count, filePathname);
             updateGroup(groupsList->members[groupsList->count - 1], entryPathname);
         }
-        else
+        else if (!isFileDup)
+            updateGroup(groupsList->members[groupsList->count - 1], filePathname);
+        else if (!isEntryDup)
             updateGroup(groupsList->members[groupsList->count - 1], entryPathname);
     }
 }
