@@ -9,6 +9,25 @@
 
 int main(int argc, char *argv[])
 {
+    // CURRENT TEST: ./finddups test/brothers test/curly.txt
+    /* TODO: 3 cases for comparison
+        1. Compare directories to directories
+        2. Compare regular files to regular files
+        3. Compare directories to regular files
+        Algorithm (1, 2)
+            Each directory specified in the command line will be compared to every single other directory
+            Example: /dir1 /dir2 /dir3 /dir4
+                1. Compare /dir1 to /dir2, then /dir3, then /dir4
+                2. Compare /dir2 to dir3, then dir4
+                3. Compare /dir3 to /dir4
+                4. Done
+            Similar algorithm will be done for comparing all files specified in the command line
+        Algorithm (3)
+            Set the directory as the "parent directory" and compare all files there to the regular file
+            Repeat this for all combinations of regular files and directories
+            Can maybe just use compareDirReg (or a modified version of it)
+    */
+
     // could not find the max size for a pathname
     if (PATHNAME_MAX == -1)
         printErr();
@@ -20,28 +39,37 @@ int main(int argc, char *argv[])
         traverseDir(".", ".", &groupsList);
     else
     {
+        int curFiletype = 0, comparingToFiletype = 0;
         // loop through every file/directory given in the command line
-        for (int i = 1; i < argc; i++)
+        for (int curComparison = 1; curComparison < argc; curComparison++)
         {
-            switch (checkFiletype(argv[i]))
+            switch ((curFiletype = checkFiletype(argv[curComparison])))
             {
-            case 1: // directory
-                // TODO: compare directories to each other
-                traverseDir(argv[i], argv[i], &groupsList);
+            case FILE_DIR:
+                traverseDir(argv[curComparison], argv[curComparison], &groupsList);
                 break;
-            case 2: // regular file
-                /* TODO
-                    1. if other command line arguments are regular files:
-                        compare the given file to all other files specified in the command line
-                    2. if other command line arguments are directories:
-                        traverse the given directory and compare all files there to the given file
-                */
-                // struct stat fileInfo;
-                // stat(argv[i], &fileInfo);
-                // checkDupsFile(basename(argv[i]), fileInfo, argv[i], ".", &groupsList);
-                break;
+            case FILE_REG:
             default: // invalid filetype
                 break;
+            }
+
+            // compare the current file/directory to every other one it hasn't been compared to yet
+            for (int comparingTo = curComparison + 1; comparingTo < argc; comparingTo++)
+            {
+                comparingToFiletype = checkFiletype(argv[comparingTo]);
+
+                switch (curFiletype + comparingToFiletype)
+                {
+                case DIR_DIR:
+                    break;
+                case DIR_REG:
+                    break;
+                case REG_REG:
+                    compareRegs(argv[curComparison], argv[comparingTo], &groupsList);
+                    break;
+                default: // something went wrong
+                    break;
+                }
             }
         }
     }

@@ -18,6 +18,13 @@
 #include <libgen.h>   // for dirname, basename
 
 #define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) + 1 // max number of bytes in a file pathname
+// TODO: change to enum
+#define FILE_DIR 1
+#define FILE_REG 2
+#define FILE_INV -1
+#define DIR_DIR 2
+#define DIR_REG 3
+#define REG_REG 4
 
 // group of duplicate files
 typedef struct
@@ -55,7 +62,6 @@ extern int checkFiletype(const char *filename);
  * @param groupsList list of Group that hold information about duplicate files
  */
 extern void traverseDir(const char *dir, const char *parentDir, Groups *groupsList);
-extern void traverseDirs(void);
 /**
  * @brief checks if a file is already marked as duplicate in a Group
  *
@@ -64,16 +70,6 @@ extern void traverseDirs(void);
  * @return int 1 = is already marked as a duplicate, 0 = not marked as a duplicate
  */
 int isAlreadyDup(Groups *groupsList, const char *pathname);
-/**
- * @brief checks a file for any duplicates recursively through a directory tree
- *
- * @param filename name of the file to check for duplicates
- * @param fileInfo data related to file
- * @param filePathname pathname to file
- * @param dirName directory to recursively search for duplicate files
- * @param groupsList list of Group that hold information about duplicate files
- */
-extern void checkDupsFile(const char *filename, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList);
 /**
  * @brief creates a new group of identical files
  *
@@ -89,6 +85,21 @@ Group *setupGroup(int groupsCount, const char *pathname);
  * @param pathname pathname of the new identical file
  */
 void updateGroup(Group *group, const char *pathname);
+extern void compareDirs(void);
+/**
+ * @brief checks a file for any duplicates recursively through a directory tree
+ *
+ * @param filename name of the file to check for duplicates
+ * @param fileInfo data related to file
+ * @param filePathname pathname to file
+ * @param dirName directory to recursively search for duplicate files
+ * @param groupsList list of Group that hold information about duplicate files
+ */
+extern void compareDirReg(const char *filename, struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList);
+extern void compareRegs(char *pathname1, char *pathname2, Groups *groupsList);
+void fullRegsCheck(const char *filename, const char *filePathname, struct stat fileInfo,
+                   const char *entryName, const char *entryPathname, struct stat entryInfo,
+                   Groups *groupsList);
 /**
  * @brief opens and reads two files for comparison and returns if they are exactly identical
  *
@@ -96,6 +107,6 @@ void updateGroup(Group *group, const char *pathname);
  * @param pathname2 pathname of the file to compare to pathname1
  * @return int 1 = files identical, 0 = files are different, -1 = error
  */
-int compareFiles(const char *pathname1, const char *pathname2);
+int checkRegs(const char *pathname1, const char *pathname2);
 
 #endif
