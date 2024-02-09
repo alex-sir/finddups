@@ -20,9 +20,30 @@ void printDirContents(DIR *dir)
     rewinddir(dir);
 }
 
+int getGroupMaxDigits(Groups *groupsList)
+{
+    int maxCount = 0, maxDigits = 0;
+
+    for (int i = 0; i < groupsList->count; i++)
+    {
+        if (groupsList->members[i]->count > maxCount)
+            maxCount = groupsList->members[i]->count;
+    }
+
+    // get the highest number of digits found in the count of a group
+    while (maxCount != 0)
+    {
+        maxCount /= 10;
+        maxDigits++;
+    }
+
+    return maxDigits;
+}
+
 void printDups(Groups *groupsList)
 {
     Group *curGroup;
+    int maxDigits = getGroupMaxDigits(groupsList);
 
     // get every group
     for (int i = 0; i < groupsList->count; i++)
@@ -30,7 +51,7 @@ void printDups(Groups *groupsList)
         curGroup = groupsList->members[i];
         // get every pathname in the group
         for (int j = 0; j < curGroup->count; j++)
-            printf("%d %d %s\n", curGroup->count, j + 1, curGroup->pathnames[j]);
+            printf("%*d %*d %s\n", maxDigits, curGroup->count, maxDigits, j + 1, curGroup->pathnames[j]);
     }
 }
 

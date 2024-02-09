@@ -7,8 +7,6 @@
 #include "traverse.h"
 #include "helpers.h"
 
-// TODO: mallocs should start at a specified amount and then realloc as appropriate
-
 char *getCurDir(void)
 {
     char *dirName = (char *)malloc(PATHNAME_MAX);
@@ -106,21 +104,27 @@ int isAlreadyDup(Groups *groupsList, const char *pathname)
     return 0; // not marked as a duplicate
 }
 
-Group *setupGroup(int groupsCount, const char *pathname)
+void setupGroup(Groups *groupsList, const char *pathname)
 {
+    // groups are full, allocate more
+    if (groupsList->count != 0 && groupsList->count % GROUPS_NUM_GROUP == 0)
+        groupsList->members = (Group **)realloc(groupsList->members, (groupsList->count + GROUPS_NUM_GROUP) * sizeof(Group *));
+    groupsList->count++;
     Group *newGroup;
     newGroup = (Group *)malloc(sizeof(Group));
-    newGroup->id = groupsCount;
+    newGroup->id = groupsList->count;
     newGroup->count = 1;
-    newGroup->pathnames = (char **)malloc(10 * (sizeof(char *)));
+    newGroup->pathnames = (char **)malloc(GROUP_NUM_PM * (sizeof(char *)));
     newGroup->pathnames[newGroup->count - 1] = (char *)malloc(strlen(pathname) + 1);
     strcpy(newGroup->pathnames[newGroup->count - 1], pathname);
-
-    return newGroup;
+    groupsList->members[groupsList->count - 1] = newGroup;
 }
 
 void updateGroup(Group *group, const char *pathname)
 {
+    // pathnames are full, allocate more
+    if (group->count != 0 && group->count % GROUP_NUM_PM == 0)
+        group->pathnames = (char **)realloc(group->pathnames, (group->count + GROUP_NUM_PM) * (sizeof(char *)));
     group->count++;
     group->pathnames[group->count - 1] = (char *)malloc(strlen(pathname) + 1);
     strcpy(group->pathnames[group->count - 1], pathname);
@@ -207,8 +211,9 @@ void fullRegsCheck(const char *filePathname, struct stat fileInfo, const char *e
         // if both not dups, make a new group and add file and entry to it
         if (!isFileDup && !isEntryDup)
         {
-            groupsList->count++;
-            groupsList->members[groupsList->count - 1] = setupGroup(groupsList->count, filePathname);
+            // groupsList->count++;
+            // groupsList->members[groupsList->count - 1] = setupGroup(groupsList, filePathname);
+            setupGroup(groupsList, filePathname);
             updateGroup(groupsList->members[groupsList->count - 1], entryPathname);
         }
         else if (!isFileDup)

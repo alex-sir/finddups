@@ -24,6 +24,8 @@
 #define DIR_DIR 2
 #define DIR_REG 3
 #define REG_REG 4
+#define GROUPS_NUM_GROUP 100 // initial number of groups allocated to Groups and added if full
+#define GROUP_NUM_PM 50      // initial number of pathnames allocated to a group and added if full
 
 // group of duplicate files
 typedef struct
@@ -73,11 +75,10 @@ extern int traverseDir(const char *dirName1, const char *dirName2, Groups *group
 extern int isAlreadyDup(Groups *groupsList, const char *pathname);
 /**
  * @brief creates a new group of identical files
- * @param groupsCount total number of groups of identical files found so far
+ * @param groupsList list of Group that hold information about duplicate files
  * @param pathname pathname of a file for which an identical file was found
- * @return Group* new group of identical files
  */
-extern Group *setupGroup(int groupsCount, const char *pathname);
+extern void setupGroup(Groups *groupsList, const char *pathname);
 /**
  * @brief updates a group of identical files by adding 1 new found identical file
  * @param group group that the new identical file will belong to

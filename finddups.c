@@ -7,13 +7,15 @@
 #include "traverse.h"
 #include "helpers.h"
 
+// TODO: Add exhaustive error checking
+
 int main(int argc, char *argv[])
 {
     // could not find the max size for a pathname
     if (PATHNAME_MAX == -1)
         printErr();
 
-    Groups groupsList = {0, (Group **)malloc(10 * sizeof(Group *))};
+    Groups groupsList = {0, (Group **)malloc(GROUPS_NUM_GROUP * sizeof(Group *))};
 
     // only traverse the current directory
     if (argc == 1)

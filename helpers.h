@@ -25,6 +25,12 @@ extern void printErr(void);
  */
 extern void printDirContents(DIR *dir);
 /**
+ * @brief calculates the highest number of digits found in the count of a group
+ * @param groupsList list of Group that hold information about duplicate files
+ * @return int highest number of digits found in a count of a group
+ */
+extern int getGroupMaxDigits(Groups *groupsList);
+/**
  * @brief prints out all duplicate file groups with n members found in a directory tree from
  *        a starting directory in form "n 1 pathOfFirstFile | n 2 pathOfSecondFile ..."
  * @param groupsList list of groups containing all duplicate file groups
