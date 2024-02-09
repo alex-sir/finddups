@@ -7,6 +7,8 @@
 #include "traverse.h"
 #include "helpers.h"
 
+// TODO: mallocs should start at a specified amount and then realloc as appropriate
+
 char *getCurDir(void)
 {
     char *dirName = (char *)malloc(PATHNAME_MAX);
@@ -40,10 +42,16 @@ int checkFiletype(const char *filename)
     }
 }
 
-int traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
+void removeRelativeIndicator(char *pathname)
 {
-    DIR *dir; // the directory
-    dir = opendir(dirName);
+    if (strncmp(pathname, "./", 2) == 0)
+        memmove(pathname, pathname + 2, strlen(pathname) - 1);
+}
+
+int traverseDir(const char *dirName1, const char *dirName2, Groups *groupsList)
+{
+    DIR *dir;
+    dir = opendir(dirName1);
     // directory stream could not be opened
     if (dir == NULL)
     {
@@ -53,26 +61,22 @@ int traverseDir(const char *dirName, const char *parentDir, Groups *groupsList)
 
     struct dirent *entry; // an entry in a directory
     struct stat entryInfo;
-
+    // read every file in dir
     while ((entry = readdir(dir)))
     {
         char newPathname[PATHNAME_MAX];
-        sprintf(newPathname, "%s/%s", dirName, entry->d_name);
-        // if directory starts with "./", remove it
-        if (strncmp(newPathname, "./", 2) == 0)
-            memmove(newPathname, newPathname + 2, strlen(newPathname) - 1);
+        sprintf(newPathname, "%s/%s", dirName1, entry->d_name);
         stat(newPathname, &entryInfo);
-
         // check if the file is a directory or a regular file
         switch (entryInfo.st_mode & __S_IFMT)
         {
         case __S_IFDIR: // directory
             if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
-                traverseDir(newPathname, parentDir, groupsList); // recursive call
+                traverseDir(newPathname, dirName2, groupsList); // recursive call
             break;
         case __S_IFREG: // regular file
             if (!isAlreadyDup(groupsList, newPathname))
-                compareDirReg(entryInfo, newPathname, parentDir, groupsList);
+                compareDirReg(entryInfo, newPathname, dirName2, groupsList);
             break;
         default: // otherwise file is ignored
             break;
@@ -122,10 +126,6 @@ void updateGroup(Group *group, const char *pathname)
     strcpy(group->pathnames[group->count - 1], pathname);
 }
 
-void compareDirs(void)
-{
-}
-
 int compareDirReg(struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList)
 {
     DIR *dir;
@@ -138,15 +138,11 @@ int compareDirReg(struct stat fileInfo, const char *filePathname, const char *di
 
     struct dirent *entry;
     struct stat entryInfo;
-
     while ((entry = readdir(dir)))
     {
         char entryPathname[PATHNAME_MAX];
         sprintf(entryPathname, "%s/%s", dirName, entry->d_name);
-        if (strncmp(entryPathname, "./", 2) == 0)
-            memmove(entryPathname, entryPathname + 2, strlen(entryPathname) - 1);
         stat(entryPathname, &entryInfo);
-
         switch (entryInfo.st_mode & __S_IFMT)
         {
         case __S_IFDIR:
@@ -180,25 +176,25 @@ int compareRegs(char *pathname1, char *pathname2, Groups *groupsList)
     }
     fullRegsCheck(pathname1, fileInfo1, pathname2, fileInfo2, groupsList);
 
-    return 0;
+    return 1;
 }
 
-char *getBasename(char *filename, char *pathname)
+char *getBasename(char *pathBasename, char *pathname)
 {
     char *pathnameBasename = "";
 
     if ((pathnameBasename = strrchr(pathname, '/') + 1))
-        strcpy(filename, pathnameBasename);
+        strcpy(pathBasename, pathnameBasename);
     else
-        strcpy(filename, pathname);
+        strcpy(pathBasename, pathname);
 
-    return filename;
+    return pathBasename;
 }
 
 void fullRegsCheck(const char *filePathname, struct stat fileInfo, const char *entryPathname, struct stat entryInfo, Groups *groupsList)
 {
     /*
-        files should be the same size in bytes if they are to be duplicates
+        files should be the same size in bytes if they are duplicates
         don't compare the file to itself
         each file should have the exact same byte data
     */
