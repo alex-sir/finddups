@@ -14,6 +14,10 @@
  */
 extern void printErr(void);
 /**
+ * @brief prints an error message with the pathname of a file
+ */
+extern void printErrFile(const char *pathname);
+/**
  * @brief prints an error message by calling printErr() and exits with failure
  */
 extern void printErrExit(void);

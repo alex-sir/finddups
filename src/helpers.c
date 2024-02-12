@@ -11,6 +11,11 @@ void printErr(void)
     fprintf(stderr, "%s\n", strerror(errno));
 }
 
+void printErrFile(const char *pathname)
+{
+    fprintf(stderr, "%s: %s\n", pathname, strerror(errno));
+}
+
 void printErrExit(void)
 {
     printErr();
@@ -89,5 +94,6 @@ void freeDups(Groups *groupsList)
     }
 
     free(groupsList->members);
+    groupsList->count = 0;
     groupsList->members = NULL;
 }

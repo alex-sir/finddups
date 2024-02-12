@@ -72,6 +72,5 @@ int main(int argc, char *argv[])
 
     printDups(&groupsList);
     freeDups(&groupsList);
-
     return 0;
 }

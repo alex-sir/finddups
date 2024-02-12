@@ -73,12 +73,13 @@ extern int compareDirReg(struct stat fileInfo, const char *filePathname, const c
  */
 extern int compareRegReg(char *pathname1, char *pathname2, Groups *groupsList);
 /**
- * @brief checks if a file is already marked as duplicate in a Group
+ * @brief checks if a file is already marked as duplicate in a Group by checking its inode number
  * @param groupsList list of Group that hold information about duplicate files
  * @param pathname pathname to file being checked
+ * @param fileInfo stat struct that contains information about the file being checked
  * @return int 1 = is already marked as a duplicate, 0 = not marked as a duplicate
  */
-extern int isAlreadyDup(Groups *groupsList, const char *pathname);
+extern int isAlreadyDup(Groups *groupsList, const char *pathname, struct stat fileInfo);
 /**
  * @brief creates a new group of identical files
  * @param groupsList list of Group that hold information about duplicate files

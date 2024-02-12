@@ -12,7 +12,7 @@ int checkFiletype(const char *filename)
     struct stat fileInfo;
     if (stat(filename, &fileInfo) == -1)
     {
-        printErr();
+        printErrFile(filename);
         return -1;
     }
 
@@ -37,7 +37,7 @@ int compareDirDir(const char *dirName1, const char *dirName2, Groups *groupsList
     // directory stream could not be opened
     if (dir == NULL)
     {
-        printErr();
+        printErrFile(dirName1);
         return -1;
     }
 
@@ -50,6 +50,11 @@ int compareDirDir(const char *dirName1, const char *dirName2, Groups *groupsList
         sprintf(newPathname, "%s/%s", dirName1, entry->d_name);
         if (stat(newPathname, &entryInfo) == -1)
             continue;
+        if (access(newPathname, R_OK) == -1)
+        {
+            printErrFile(newPathname);
+            continue;
+        }
         // check if the file is a directory or a regular file
         switch (entryInfo.st_mode & __S_IFMT)
         {
@@ -58,7 +63,7 @@ int compareDirDir(const char *dirName1, const char *dirName2, Groups *groupsList
                 compareDirDir(newPathname, dirName2, groupsList); // recursive call
             break;
         case __S_IFREG: // regular file
-            if (!isAlreadyDup(groupsList, newPathname))
+            if (!isAlreadyDup(groupsList, newPathname, entryInfo))
                 compareDirReg(entryInfo, newPathname, dirName2, groupsList);
             break;
         default: // otherwise file is ignored
@@ -76,7 +81,7 @@ int compareDirReg(struct stat fileInfo, const char *filePathname, const char *di
     dir = opendir(dirName);
     if (dir == NULL)
     {
-        printErr();
+        printErrFile(dirName);
         return -1;
     }
 
@@ -88,6 +93,11 @@ int compareDirReg(struct stat fileInfo, const char *filePathname, const char *di
         sprintf(entryPathname, "%s/%s", dirName, entry->d_name);
         if (stat(entryPathname, &entryInfo) == -1)
             continue;
+        if (access(entryPathname, R_OK) == -1)
+        {
+            printErrFile(entryPathname);
+            continue;
+        }
         switch (entryInfo.st_mode & __S_IFMT)
         {
         case __S_IFDIR:
@@ -111,12 +121,12 @@ int compareRegReg(char *pathname1, char *pathname2, Groups *groupsList)
     struct stat fileInfo1, fileInfo2;
     if (stat(pathname1, &fileInfo1) == -1)
     {
-        printErr();
+        printErrFile(pathname1);
         return -1;
     }
     if (stat(pathname2, &fileInfo2) == -1)
     {
-        printErr();
+        printErrFile(pathname2);
         return -1;
     }
     fullRegsCheck(pathname1, fileInfo1, pathname2, fileInfo2, groupsList);
@@ -124,9 +134,10 @@ int compareRegReg(char *pathname1, char *pathname2, Groups *groupsList)
     return 1;
 }
 
-int isAlreadyDup(Groups *groupsList, const char *pathname)
+int isAlreadyDup(Groups *groupsList, const char *pathname, struct stat fileInfo)
 {
     Group *curGroup;
+    struct stat entryInfo;
 
     // get every group
     for (int i = 0; i < groupsList->count; i++)
@@ -135,7 +146,9 @@ int isAlreadyDup(Groups *groupsList, const char *pathname)
         // get every pathname in the group
         for (int j = 0; j < curGroup->count; j++)
         {
-            if (strcmp(curGroup->pathnames[j], pathname) == 0)
+            if (stat(curGroup->pathnames[j], &entryInfo) == -1)
+                printErrFile(curGroup->pathnames[j]);
+            if (entryInfo.st_ino == fileInfo.st_ino)
                 return 1; // already marked as a duplicate
         }
     }
@@ -211,11 +224,11 @@ void fullRegsCheck(const char *filePathname, struct stat fileInfo, const char *e
         each file should have the exact same byte data
     */
     if (fileInfo.st_size == entryInfo.st_size &&
-        strcmp(filePathname, entryPathname) != 0 &&
+        fileInfo.st_ino != entryInfo.st_ino &&
         checkRegs(filePathname, entryPathname))
     {
-        int isFileDup = isAlreadyDup(groupsList, filePathname),
-            isEntryDup = isAlreadyDup(groupsList, entryPathname);
+        int isFileDup = isAlreadyDup(groupsList, filePathname, fileInfo),
+            isEntryDup = isAlreadyDup(groupsList, entryPathname, entryInfo);
         // if both not dups, make a new group and add file and entry to it
         if (!isFileDup && !isEntryDup)
         {
