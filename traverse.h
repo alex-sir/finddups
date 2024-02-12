@@ -7,20 +7,19 @@
 #ifndef TRAVERSE
 #define TRAVERSE
 
-#include <stdio.h>    // for print
-#include <stdlib.h>   // for exit
-#include <dirent.h>   // for opendir, readdir
-#include <unistd.h>   // for getcwd, stat
-#include <sys/stat.h> // for struct stat
+#include <stdio.h>    // for print()
+#include <stdlib.h>   // for exit()
+#include <string.h>   // for strerror(), strcmp()
 #include <limits.h>   // for _PC_PATH_MAX
 #include <errno.h>    // for errno
-#include <string.h>   // for strerror, strcmp
-#include <libgen.h>   // for dirname, basename
+#include <dirent.h>   // for opendir(), readdir()
+#include <unistd.h>   // for stat()
+#include <sys/stat.h> // for struct stat
 
 #define PATHNAME_MAX pathconf(".", _PC_PATH_MAX) + 1 // max number of bytes in a file pathname
 #define FILE_DIR 1
 #define FILE_REG 2
-#define FILE_INV -1
+#define FILE_INV 0
 #define DIR_DIR 2
 #define DIR_REG 3
 #define REG_REG 4
@@ -43,29 +42,36 @@ typedef struct
 } Groups;
 
 /**
- * @brief gets the name of the current directory
- * @return char* name of the current directory or NULL on error
- */
-extern char *getCurDir(void);
-/**
  * @brief checks what type of file filename is (regular file, directory, or neither)
  * @param filename name of the file to check its filetype
- * @return int 1 = directory, 2 = regular file, -1 = invalid filetype
+ * @return int 1 = directory, 2 = regular file, 0 = invalid filetype, -1 = error
  */
 extern int checkFiletype(const char *filename);
 /**
- * @brief if a pathname starts with "./", remove it
- * @param pathname pathname to modify
- */
-extern void removeRelativeIndicator(char *pathname);
-/**
- * @brief recursively traverses down a directory tree checking for groups of duplicates files
- * @param dirName1 name of directory being searched in
+ * @brief recursively traverses down a directory tree checking for groups of duplicates files within another directory
+ * @param dirName1 name of directory being searched for duplicate files
  * @param dirName2 name of directory files from dirName1 will be compared to
  * @param groupsList list of Group that hold information about duplicate files
  * @return int 1 = success, -1 = error
  */
-extern int traverseDir(const char *dirName1, const char *dirName2, Groups *groupsList);
+extern int compareDirDir(const char *dirName1, const char *dirName2, Groups *groupsList);
+/**
+ * @brief checks a file for any duplicates recursively through a directory tree
+ * @param fileInfo data related to file
+ * @param filePathname pathname to file
+ * @param dirName directory to recursively search for duplicate files
+ * @param groupsList list of Group that hold information about duplicate files
+ * @return int 1 = success, -1 = error
+ */
+extern int compareDirReg(struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList);
+/**
+ * @brief compares two regular files to see if they are duplicates
+ * @param pathname1 pathname to first file
+ * @param pathname2 pathname to second file
+ * @param groupsList list of Group that hold information about duplicate files
+ * @return int 1 = success, -1 = error
+ */
+extern int compareRegReg(char *pathname1, char *pathname2, Groups *groupsList);
 /**
  * @brief checks if a file is already marked as duplicate in a Group
  * @param groupsList list of Group that hold information about duplicate files
@@ -83,32 +89,9 @@ extern void setupGroup(Groups *groupsList, const char *pathname);
  * @brief updates a group of identical files by adding 1 new found identical file
  * @param group group that the new identical file will belong to
  * @param pathname pathname of the new identical file
- */
-extern void updateGroup(Group *group, const char *pathname);
-/**
- * @brief checks a file for any duplicates recursively through a directory tree
- * @param fileInfo data related to file
- * @param filePathname pathname to file
- * @param dirName directory to recursively search for duplicate files
  * @param groupsList list of Group that hold information about duplicate files
- * @return int 1 = success, -1 = error
  */
-extern int compareDirReg(struct stat fileInfo, const char *filePathname, const char *dirName, Groups *groupsList);
-/**
- * @brief compares two regular files to see if they are duplicates
- * @param pathname1 pathname to first file
- * @param pathname2 pathname to second file
- * @param groupsList list of Group that hold information about duplicate files
- * @return int 1 = success, -1 = error
- */
-extern int compareRegs(char *pathname1, char *pathname2, Groups *groupsList);
-/**
- * @brief gets the basename from a filepath if available
- * @param pathBasename string storing the basename
- * @param pathname filepath basename will be acquired from
- * @return char* acquired basename or pathname if a basename was not extracted
- */
-extern char *getBasename(char *pathBasename, char *pathname);
+extern void updateGroup(Group *group, const char *pathname, Groups *groupsList);
 /**
  * @brief performs a comprehensive duplicity comparison between two given files
  * @param filePathname pathname to a file

@@ -8,14 +8,23 @@
 
 void printErr(void)
 {
-    fprintf(stderr, "Error: %s\n", strerror(errno));
+    fprintf(stderr, "%s\n", strerror(errno));
+}
+
+void printErrExit(void)
+{
+    printErr();
+    exit(EXIT_FAILURE);
 }
 
 void printDirContents(DIR *dir)
 {
     struct dirent *entry;
     for (int i = 1; (entry = readdir(dir)); i++)
-        printf("%d %s\n", i, entry->d_name);
+    {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+            printf("%d %s\n", i, entry->d_name);
+    }
 
     rewinddir(dir);
 }
@@ -58,15 +67,27 @@ void printDups(Groups *groupsList)
 void freeDups(Groups *groupsList)
 {
     // free every Group member in groupsList
-    for (int i = 0; i < groupsList->count; i++)
+    if (groupsList->count > 0)
     {
-        // free every pathname string in Group
-        for (int j = 0; j < groupsList->members[i]->count; j++)
-            free(groupsList->members[i]->pathnames[j]);
+        for (int i = 0; i < groupsList->count; i++)
+        {
+            if (groupsList->members[i]->count > 0)
+            {
+                // free every pathname string in Group
+                for (int j = 0; j < groupsList->members[i]->count; j++)
+                {
+                    free(groupsList->members[i]->pathnames[j]);
+                    groupsList->members[i]->pathnames[j] = NULL;
+                }
+            }
 
-        free(groupsList->members[i]->pathnames);
-        free(groupsList->members[i]);
+            free(groupsList->members[i]->pathnames);
+            groupsList->members[i]->pathnames = NULL;
+            free(groupsList->members[i]);
+            groupsList->members[i] = NULL;
+        }
     }
 
     free(groupsList->members);
+    groupsList->members = NULL;
 }

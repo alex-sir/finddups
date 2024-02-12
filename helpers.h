@@ -7,18 +7,16 @@
 #ifndef HELPERS
 #define HELPERS
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <dirent.h>
-
 #include "traverse.h"
 
 /**
  * @brief prints an error message
  */
 extern void printErr(void);
+/**
+ * @brief prints an error message by calling printErr() and exits with failure
+ */
+extern void printErrExit(void);
 /**
  * @brief prints all the contents in a directory (non-recursive)
  * @param dir directory to have its contents printed

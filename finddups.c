@@ -7,19 +7,19 @@
 #include "traverse.h"
 #include "helpers.h"
 
-// TODO: Add exhaustive error checking
-
 int main(int argc, char *argv[])
 {
     // could not find the max size for a pathname
     if (PATHNAME_MAX == -1)
-        printErr();
+        printErrExit();
 
     Groups groupsList = {0, (Group **)malloc(GROUPS_NUM_GROUP * sizeof(Group *))};
+    if (groupsList.members == NULL)
+        printErrExit();
 
     // only traverse the current directory
     if (argc == 1)
-        traverseDir(".", ".", &groupsList);
+        compareDirDir(".", ".", &groupsList);
     else
     {
         int curFiletype = 0, comparingToFiletype = 0;
@@ -29,11 +29,13 @@ int main(int argc, char *argv[])
         {
             switch ((curFiletype = checkFiletype(argv[curComparison])))
             {
-            case FILE_DIR:
-                traverseDir(argv[curComparison], argv[curComparison], &groupsList);
+            case FILE_DIR: // compare directory to itself
+                compareDirDir(argv[curComparison], argv[curComparison], &groupsList);
                 break;
-            case FILE_REG:
-            default: // invalid filetype
+            case FILE_REG: // do nothing
+                break;
+            default: // invalid file
+                continue;
                 break;
             }
 
@@ -44,7 +46,7 @@ int main(int argc, char *argv[])
                 switch (curFiletype + comparingToFiletype)
                 {
                 case DIR_DIR:
-                    traverseDir(argv[comparingTo], argv[curComparison], &groupsList);
+                    compareDirDir(argv[comparingTo], argv[curComparison], &groupsList);
                     break;
                 case DIR_REG: // check for duplicates of a regular file in a directory
                     if (curFiletype == FILE_REG)
@@ -59,7 +61,7 @@ int main(int argc, char *argv[])
                     }
                     break;
                 case REG_REG:
-                    compareRegs(argv[curComparison], argv[comparingTo], &groupsList);
+                    compareRegReg(argv[curComparison], argv[comparingTo], &groupsList);
                     break;
                 default: // something went wrong
                     break;
