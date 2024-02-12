@@ -12,16 +12,16 @@ LDFLAGS = -g
 default: $(BINS)
 
 # Compile *.c into *.o
-%.o: %.c
-	$(CC) $(CFLAGS) -c $<
+src/%.o: src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Removes *.o files, but leaves executable
 .PHONY: clean
 clean:
-	rm -f core* *.o *~
+	rm -f core* src/*.o *~
 
 # Link *.o files into an executable
-finddups: traverse.o helpers.o finddups.o
+finddups: src/traverse.o src/helpers.o src/finddups.o
 	$(CC) $(LDFLAGS) $^ -o $@
 
 # Removes all files that can be reconstructed through "make"
